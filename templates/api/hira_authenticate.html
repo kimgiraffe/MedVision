@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PASS를 통한 간편인증</title>
+</head>
+<body>
+<form id="personal_info" method="post">
+    {%  csrf_token %}
+    이름 : <input name='username' type='text'/><br>
+    생년월일 : <input name='birthdate' type='number'/><br>
+    전화번호 : <input name='cellphone' type='tel'/><br>
+    주민번호 : <input name='identity' type='number'/><br>
+    <input type='submit' value="다음">
+</form>
+</body>
+</html>
