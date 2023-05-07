@@ -7,7 +7,8 @@ from django.http import HttpResponse, JsonResponse
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from api.api_param import API_Param
-from .처방내역 import getPrescrption
+from .처방내역 import getPrescription
+from users.models import User
 import sys
 
 # Create your views here.
@@ -29,10 +30,17 @@ def createLoginView(request):
 
         username = request.POST['username']
         birthdate = request.POST['birthdate']
-        cellphone = request.POST['cellphone'].replace('-', '')
-        identity = request.POST['identity']
+        cellphoneNumber = request.POST['cellphone'].replace('-', '')
+        identityNumber = request.POST['identity']
 
-        apiParam = API_Param(username, birthdate, cellphone, identity)
-        getPrescrption(apiParam._apiHost, apiParam._apiKey, apiParam)
+        apiParam = API_Param(username, birthdate, cellphoneNumber, identityNumber)
+        getPrescription(apiParam._apiHost, apiParam._apiKey, apiParam)
+
+        # DB에 회원 실명 등록
+        if(User.objects.count() == 1):
+            user = User.objects.first()
+            if user.userRealName == '':
+                user.userRealName = username
+                user.save()
 
         return JsonResponse(data=request.POST)
