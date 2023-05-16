@@ -1,17 +1,37 @@
 <!DOCTYPE html>
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'bootstrap.min.css' %}">
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>PASS를 통한 간편인증</title>
 </head>
 <body>
-<form id="personal_info" method="post">
-    {%  csrf_token %}
-    이름 : <input name='username' type='text'/><br>
-    생년월일 : <input name='birthdate' type='number'/><br>
-    전화번호 : <input name='cellphone' type='tel'/><br>
-    주민번호 : <input name='identity' type='number'/><br>
-    <input type='submit' value="다음">
-</form>
+<div class="container my-3">
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="username">이름</label>
+            <input type="text" class="form-control" name="username"
+                   value="{{ form.username.value|default_if_none:'' }}">
+        </div>
+        <div class="mb-3">
+            <label for="birthdate">생년월일</label>
+            <input type="number" class="form-control" name="birthdate"
+                   value="{{ form.birthdate.value|default_if_none:'' }}">
+        </div>
+        <div class="mb-3">
+            <label for="cellphone">전화번호</label>
+            <input type="tel" class="form-control" name="cellphone"
+                   value="{{ form.cellphone.value|default_if_none:'' }}">
+        </div>
+        <div class="mb-3">
+            <label for="identity">주민등록번호</label>
+            <input type="tel" class="form-control" name="identity"
+                   value="{{ form.identity.value|default_if_none:'' }}">
+        </div>
+        <button type="submit" class="btn btn-primary">간편인증하기</button>
+    </form>
+</div>
 </body>
 </html>

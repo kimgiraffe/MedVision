@@ -2,11 +2,12 @@ import os, base64
 import requests
 from .암호화 import aesEncrypt, rsaEncrypt, getPublicKey
 from .간편인증 import simpleAuth
-from .낱알정보 import getPillInfo
-from .api_param import API_Param
+from .낱알정보 import getPillData
+from django.db.models import Q
+from django.http import JsonResponse
 from users.models import Prescription, DrugInfo, PrescDetail, PillData
 
-def getPrescription(apiHost, apiKey, apiParam):
+def getPrescription(user, apiParam):
     # RSA Public Key 조회
     rsaPublicKey = getPublicKey()
     print(f"rsaPublicKey: {rsaPublicKey}")
@@ -19,6 +20,8 @@ def getPrescription(apiHost, apiKey, apiParam):
     aesCipherKey = base64.b64encode(rsaEncrypt(rsaPublicKey, aesKey))
     print(f"aesCipherKey: {aesCipherKey}")
 
+    apiHost = apiParam._apiHost
+    apiKey = apiParam._apiKey
     # API URL 설정
     url = apiHost + "api/v1.0/hirasimpleauth/hiraa050300000100"
 
@@ -53,27 +56,29 @@ def getPrescription(apiHost, apiKey, apiParam):
     resultList = res.json()["ResultList"]
     latestPrescId = None
 
-    if Prescription.objects.count() != 0:
-        latestPrescId = Prescription.objects.latest('prescId').prescId
+    try:
+        latestPrescId = Prescription.objects.filter(Q(userId=user)).latest('prescId').prescId
+
+    except Prescription.DoesNotExist:
+        pass
+
     print(latestPrescId)
 
-    # prescIdList = []
     # 지난 1년 처방이력 출력
     for i in resultList:
         print(f"조제일자: {i['DateOfPreparation']}")
-        # 처방건 리스트 추가
-        # prescIdList.append(i['No'])
 
         # Prescription 모델 DB에 저장
-        id = i['No']
+        prescId = i['No']
         if i['No'] != str(latestPrescId) or latestPrescId is None:
-            Prescription(prescId=id, prescDate=i['DateOfPreparation'], dispensary=i['Dispensary']).save()
+            prescItem = Prescription(userId=user, prescId=prescId, prescDate=i['DateOfPreparation'], dispensary=i['Dispensary'])
+            prescItem.save()
+
             # 처방내역 정보 DB에 저장
             for j in i['DrugList']:
                 ediCode = j['Code']
                 print(j)
                 print(j['Code'])
-                # getPillInfo(id, ediCode)
 
                 # 처방내역의 약물 정보 DB에 저장
                 DrugInfo(
@@ -85,13 +90,17 @@ def getPrescription(apiHost, apiKey, apiParam):
                 ).save()
 
                 PrescDetail(
-                    prescId=id,
+                    prescription=prescItem,
                     drugNo=ediCode,
                     dosagePerOnce=j['DosagePerOnce'],
                     dailyDose=j['DailyDose'],
                     totalDosingDays=j['TotalDosingDays']
-                ).save()
-        else: break
+                    ).save()
 
-    # return prescIdList
+                # 알약 특징 검색하고 DB에 저장
+                if PillData.objects.filter(drugNo=ediCode).exists() == False:
+                    getPillData(ediCode)
+                else: pass
+
+        else: break
 

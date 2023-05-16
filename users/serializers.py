@@ -1,12 +1,12 @@
 from rest_framework import serializers
-from .models import User, Prescription, Schedule, DrugDetail, DrugHour
+from .models import User, Prescription, DrugInfo, PrescDetail, Schedule, DrugHour
 
-class UserSerializer(serializers.Serializer):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['userId', 'userRealName', 'userEmail']
 
-class PrescriptionSerializer(serializers.Serializer):
+class PrescriptionSerializer(serializers.ModelSerializer):
     # prescId = serializers.DecimalField
     # prescDate = serializers.DateField
     # dispensary = serializers.CharField
@@ -14,20 +14,25 @@ class PrescriptionSerializer(serializers.Serializer):
         model = Prescription
         fields = '__all__'
 
-class ScheduleSerializer(serializers.Serializer):
-    prescDate = serializers.ReadOnlyField(source='prescId.prescDate')
-    dispensary = serializers.ReadOnlyField(source='prescId.dispensary')
+class ScheduleSerializer(serializers.ModelSerializer):
+    prescDate = serializers.ReadOnlyField(source='prescription.prescDate')
+    dispensary = serializers.ReadOnlyField(source='prescription.dispensary')
     class Meta:
         model = Schedule
         fields = ['startDate', 'endDate', 'prescDate', 'dispensary']
 
-class DrugDetailSerializer(serializers.Serializer):
+class DrugInfoSerializer(serializers.ModelSerializer):
     class Meta:
-        model = DrugDetail
-        fields = ['drugName', 'drugEffect', 'quantity', 'dosagePerOnce', 'dailyDose', 'totalDosingDays', 'startDate']
+        model = DrugInfo
+        fields = '__all__'
 
-class DrugHourSerializer(serializers.Serializer):
+class PrescDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PrescDetail
+        fields = ['dosagePerOnce', 'dailyDose', 'totalDosingDays', 'startDate']
+
+class DrugHourSerializer(serializers.ModelSerializer):
     drugName = serializers.ReadOnlyField(source='drugId.drugName')
     class Meta:
         model = DrugHour
-        fields = ['drugName', 'hour']
+        fields = ['drugNo', 'hour']

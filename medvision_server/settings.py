@@ -40,8 +40,14 @@ INSTALLED_APPS = [
     "rest_framework",
     "api",
     "users",
-    "search"
+    "search",
+    "django_extensions"
 ]
+
+GRAPH_MODELS = {
+  'all_applications': True,
+  'group_models': True,
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -104,6 +110,10 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/

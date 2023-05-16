@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="db.sqlite3" uuid="8b9a0528-7a64-4bbb-9929-f0d0c10f1393">
+    <data-source source="LOCAL" name="Django default" uuid="cb116290-63f8-445f-9c90-56c45ff2f318">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
+      <imported>true</imported>
+      <remarks>$PROJECT_DIR$/medvision_server/settings.py</remarks>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
-      <jdbc-url>jdbc:sqlite:C:\Users\임민섭\PycharmProjects\MedVision\db.sqlite3</jdbc-url>
+      <jdbc-url>jdbc:sqlite:C:\Users\web02\Documents\카카오톡 받은 파일\MedVision (2)\MedVision\db.sqlite3</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
   </component>
