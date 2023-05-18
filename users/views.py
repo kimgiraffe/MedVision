@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from .models import User, Prescription, DrugInfo
-from .serializers import UserSerializer, PrescriptionSerializer, DrugInfoSerializer
+from .serializers import UserSerializer, PrescriptionSerializer, DrugInfoSerializer, RegisterSerializer
 from django.http import HttpResponse
 from rest_framework import generics
 
@@ -30,14 +30,20 @@ def index(request):
 
         return render(request, 'login.html', res_data)
 
-def register(request):
-    if request.method == 'GET':
-        return render(request, 'register.html')
+
+#def register(request):
+#    if request.method == 'GET':
+#        return render(request, 'register.html')
+
 
 # def PrescList(request):
 #     user = User.objects.get(userId=request.session['userId'])
 #     if request.method == 'GET':
 #
+
+class RegisterView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = RegisterSerializer
 
 class UserView(generics.ListCreateAPIView):
     queryset = User.objects.all()
