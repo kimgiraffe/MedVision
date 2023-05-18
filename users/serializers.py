@@ -6,6 +6,36 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['userId', 'userRealName', 'userEmail']
 
+class RegisterSerializer(serializers.ModelSerializer):
+
+    password2 = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ('userId', 'userPassword', 'password2', 'userRealName', 'userEmail', 'userRegisterDatetime')
+
+
+    def validate(self, attrs):
+        if attrs['userPassword'] != attrs['password2']:
+            raise serializers.ValidationError({
+                "password": "비밀번호가 일치하지 않습니다"
+            })
+        
+        if User.objects.filter(userId=attrs['userId']).exists():
+            raise serializers.ValidationError("가입된 Id 입니다.")
+
+        
+        if User.objects.filter(userEmail=attrs['userEmail']).exists():
+            raise serializers.ValidationError("가입된 email 입니다.")
+
+        return attrs
+
+    def create(self, validated_data):
+        validated_data.pop('password2')
+        user = User.objects.create(**validated_data)
+        return user
+
+
 class PrescriptionSerializer(serializers.ModelSerializer):
     # prescId = serializers.DecimalField
     # prescDate = serializers.DateField
