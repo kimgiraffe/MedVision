@@ -1,15 +1,34 @@
+from django.contrib.auth.base_user import BaseUserManager
 from django.db import models
 
 # Create your models here.
+class UserManager(BaseUserManager):
+    def create_user(self, userId, userPassword, userEmail, **kwargs):
+        # 회원가입 메서드
+        if not userId:
+            raise ValueError(
+                '아이디를 입력해주세요'
+            )
+        if not userPassword:
+            raise ValueError(
+                '비밀번호를 입력해주세요'
+            )
+        user = User(userId=userId,
+                    userPassword=userPassword,
+                    userEmail=userEmail)
+        user.save()
+        return user
+
 class User(models.Model):
     userId = models.CharField(max_length=12, unique=True)
     userPassword = models.CharField(max_length=20)
     userRealName = models.CharField(max_length=10, blank=True, null=False, default="")
-    userEmail = models.EmailField(max_length=25)
+    userEmail = models.EmailField(max_length=25, unique=True)
     userRegisterDatetime = models.DateTimeField(auto_now_add=True)
+    is_delete = models.BooleanField(default=False)
 
 class Prescription(models.Model):
-    userId = models.ForeignKey("User",
+    user = models.ForeignKey("User",
                                on_delete = models.CASCADE,
                                db_column="userId",
                                related_name='prescriptions'
@@ -39,7 +58,11 @@ class PrescDetail(models.Model):
                                 on_delete=models.CASCADE,
                                 db_column="prescId",
                                 related_name='prescDetail')
-    drugNo = models.DecimalField(max_digits=9, decimal_places=0)
+    drugInfo = models.ForeignKey("DrugInfo",  # 약물번호
+                                # primary_key=True,
+                                on_delete=models.CASCADE,
+                                db_column="drugNo",
+                                related_name='prescDetail')
     dosagePerOnce = models.DecimalField(max_digits=6, decimal_places=2)  # 1회 투약량
     dailyDose = models.IntegerField()           # 1일 투여횟수
     totalDosingDays = models.IntegerField()     # 총 투여일수
@@ -47,9 +70,12 @@ class PrescDetail(models.Model):
 class DrugHour(models.Model):
     schedule = models.ForeignKey("Schedule",
                                    on_delete=models.CASCADE,
-                                   db_column="scheduleId",
+                                   db_column="schedule",
                                    related_name="drugHour")
-    drugNo = models.DecimalField(max_digits=9, decimal_places=0)
+    prescDetail = models.ForeignKey("PrescDetail",
+                                   on_delete=models.CASCADE,
+                                   db_column="prescDetail",
+                                   related_name="drugHour")
     hour = models.TimeField()
 
 class PillData(models.Model):
