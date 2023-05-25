@@ -19,18 +19,19 @@ class LoginSerializer(serializers.Serializer):
         print(password)
 
         if username and password:
-            user = User.objects.filter(userId=username, is_delete=True)
-            if user.exists():
+            try:
+                user = User.objects.get(userId=username)
                 if password == user.userPassword:
                     print('로그인 성공')
                     return data
                 else:
-                    raise serializers.ValidationError("아이디 또는 비밀번호가 틀립니다")    
-            else:
+                    raise serializers.ValidationError("아이디 또는 비밀번호가 틀립니다")
+                    
+            except User.DoesNotExist:
                     raise serializers.ValidationError("아이디 또는 비밀번호가 틀립니다")
         else:
             raise serializers.ValidationError("아이디와 비밀번호를 모두 입력하세요")
-
+ 
 
 class RegisterSerializer(serializers.ModelSerializer):
 
