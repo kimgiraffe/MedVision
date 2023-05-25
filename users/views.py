@@ -144,15 +144,20 @@ class UserUpdateView(APIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class UserDeleteView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self,request):
-        user = User.objects.get(userId=request.user)
+    def get(self,request):
+        userId = request.user
+        user = User.objects.get(userId=userId)
+        model_user = models.User.objects.get(username=userId)
         logout(request)
-        user.is_delete = True
-        user.save()
-        return Response(status=status.HTTP_200_OK)
+
+        user.delete()
+        model_user.delete()
+
+        return Response({"message": "탈퇴되었습니다."},status=status.HTTP_200_OK)
 
 
 class UserView(generics.ListCreateAPIView):
