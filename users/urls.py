@@ -12,7 +12,8 @@ urlpatterns = [
     path('druginfo/', views.DrugInfoView.as_view()),
     path('prescdetail/', views.PrescDetailListView.as_view()),
     # path('schedules/', views.scheduleList),
-
+    path('schedule/<int:presc_id>/delete/', views.ScheduleDeleteView.as_view(), name='delete_schedule'),
+    path('schedule/<int:presc_id>/', views.ScheduleUpadateView.as_view(), name='update_schedule'),
 
     path('user/', views.UserView.as_view()),
 
