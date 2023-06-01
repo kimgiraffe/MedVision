@@ -7,7 +7,8 @@ from django.shortcuts import render, redirect
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import User, Prescription, PrescDetail, DrugInfo, Schedule
-from .serializers import UserSerializer, PrescriptionSerializer, PrescDetailSerializer, DrugInfoSerializer, ScheduleSerializer, LoginSerializer, RegisterSerializer, UserUpdateSerializer
+from .serializers import UserSerializer, PrescriptionSerializer, PrescDetailSerializer, DrugInfoSerializer, ScheduleSerializer,\
+LoginSerializer, RegisterSerializer, UserUpdateSerializer, ScheduleUpdateSerializer
 from rest_framework import generics, status
 from datetime import datetime, timedelta
 
@@ -144,21 +145,23 @@ class UserUpdateView(APIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class UserDeleteView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self,request):
         userId = request.user
-        user = User.objects.get(userId=userId)
-        model_user = models.User.objects.get(username=userId)
-        logout(request)
 
-        user.delete()
-        model_user.delete()
+        if userId.is_authenticated:
+            user = User.objects.get(userId=userId)
+            model_user = models.User.objects.get(username=userId)
 
-        return Response({"message": "탈퇴되었습니다."},status=status.HTTP_200_OK)
+            user.delete()
+            model_user.delete()
 
+            return Response({"message": "탈퇴되었습니다."},status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response({'message': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+ 
 
 class UserView(generics.ListCreateAPIView):
     queryset = User.objects.all()
@@ -237,7 +240,6 @@ class ScheduleListView(generics.ListAPIView):
         Schedule(prescription=prescription, startDate=startDate, endDate=endDate).save()
         
 
-
 class ScheduleDetailView(APIView):
     def get_schedule(self, request):
          # 처방번호 가져오기
@@ -247,6 +249,32 @@ class ScheduleDetailView(APIView):
         # Serializer에서 해당 검색
         queryset = PrescDetail.objects.filter(prescription=prescription)
 
+
+class ScheduleDeleteView(APIView):
+    def delete(self, request, presc_id):
+        try:
+            schedule = Schedule.objects.get(prescription__prescId=presc_id)
+        except Schedule.DoesNotExist:
+            return Response({'message': '복용 일정을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if schedule.prescription.user != request.user:
+            schedule.delete()
+        return Response({'message': '복용 일정이 삭제되었습니다'}, status=status.HTTP_204_NO_CONTENT)
+
+
+class ScheduleUpadateView(APIView):
+    serializer_class = ScheduleUpdateSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, presc_id):
+        schedule = Schedule.objects.get(prescription__prescId=presc_id)
+        serializer = self.serializer_class(schedule, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
 """     
   login via web 
   """

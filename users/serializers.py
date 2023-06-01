@@ -113,6 +113,19 @@ class ScheduleSerializer(serializers.ModelSerializer):
         model = Prescription
         fields = '__all__'
 
+class ScheduleUpdateSerializer(serializers.ModelSerializer):
+    startDate = serializers.DateField(required=True)
+    endDate = serializers.DateField(required=True)
+
+    class Meta:
+        model = Schedule
+        fields = ('startDate', 'endDate')
+    
+    def validate(self, attrs):
+        if attrs['endDate'] <= attrs['startDate']:
+            raise serializers.ValidationError("종료일은 시작일보다 늦어야 합니다.")
+        return attrs
+
 class DrugHourSerializer(serializers.ModelSerializer):
     class Meta:
         model = DrugHour
