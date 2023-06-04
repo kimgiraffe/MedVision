@@ -41,25 +41,30 @@ class DrugInfoAdmin(admin.ModelAdmin):
 class PrescDetailAdmin(admin.ModelAdmin):
     list_display = (
         'prescId',
-        'drugNo',
+        'drugInfo',
         'dosagePerOnce',
         'dailyDose',
         'totalDosingDays',
     )
     def prescId(self, obj):
         return obj.prescription.prescId
+    def drugInfo(self, obj):
+        return obj.drugInfo.drugName
 
 @admin.register(DrugHour)
 class DrugHourAdmin(admin.ModelAdmin):
     list_display = (
         'prescId',
-        'drugNo',
+        'startDate',
+        'drugName',
         'hour',
     )
     def startDate(self, obj):
         return obj.schedule.startDate
     def prescId(self, obj):
         return obj.schedule.prescId
+    def drugName(self, obj):
+        return obj.prescDetail.drugInfo
 
 @admin.register(PillData)
 class PillDataAdmin(admin.ModelAdmin):

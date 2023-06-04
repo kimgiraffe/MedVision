@@ -1,6 +1,8 @@
 import django.db.utils
 from django.contrib.auth import login, logout, authenticate, models
 from django.contrib.auth.hashers import make_password
+
+from rest_framework.generics import UpdateAPIView
 from rest_framework.permissions import IsAuthenticated
 from django.http import HttpResponse 
 from django.shortcuts import render, redirect
@@ -102,7 +104,7 @@ class LoginView(APIView):
         print(user)
         serializer = self.serializer_class(data=user)
         serializer.is_valid(raise_exception=True)
-        print(request.data)
+
         loginUser = authenticate(request, username=user['username'], password=user['password'])
         print(loginUser)
         login(request, loginUser)
@@ -224,6 +226,20 @@ class ScheduleListView(generics.ListAPIView):
         # 처방내역 선택
         prescId = request.data['prescId']
         prescription = Prescription.objects.get(prescId=prescId)
+
+        # 날짜 등록하는 View에서 구현할 것
+        # # 일정 종료일자 검색 (처방내역에서 계산)
+        # items = prescription.prescdetails
+        # maxDosingDays = 0
+        # for i in items:
+        #     if i.totalDosingDays > max:
+        #         maxDosingDays = int(i)
+        #
+        # startDate = datetime.strptime(prescription.prescDate).date()
+        # endDate = startDate + timedelta(days=maxDosingDays)
+
+        #Schedule(prescription=prescription).save()
+
     
         startDateStr = request.data['startDate']
 

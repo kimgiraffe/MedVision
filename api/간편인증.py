@@ -4,9 +4,10 @@ from .암호화 import aesEncrypt, rsaEncrypt, getPublicKey
 from .api_param import API_Param
 
 # API 호출
-def simpleAuth(apiHost, apiKey, apiParam):
+def simpleAuth(apiHost, apiParam):
+    apiKey = apiParam._apiKey
     # RSA Public Key 조회
-    rsaPublicKey = getPublicKey()
+    rsaPublicKey = getPublicKey(apiKey)
     print(f"rsaPublicKey: {rsaPublicKey}")
 
     # AES Secret Key 및 IV 생성

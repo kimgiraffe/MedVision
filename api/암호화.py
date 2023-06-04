@@ -4,7 +4,6 @@ from Crypto.Cipher import PKCS1_v1_5, AES
 import requests
 
 apiHost = 'https://api.tilko.net/'
-apiKey = 'd826bc51673f456c960e4b30e2ef08f8'
 
 # AES 암호화 함수
 def aesEncrypt(key, iv, plainText):
@@ -45,7 +44,7 @@ def rsaEncrypt(publicKey, aesKey):
     return aesCipherKey
 
 # RSA 공개키(Public Key) 조회 함수
-def getPublicKey():
+def getPublicKey(apiKey):
     headers = {'Content-Type': 'application/json'}
     response = requests.get(apiHost + "/api/Auth/GetPublicKey?APIkey=" + apiKey, headers=headers)
     return response.json()['PublicKey']

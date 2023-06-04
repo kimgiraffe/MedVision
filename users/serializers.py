@@ -31,7 +31,7 @@ class LoginSerializer(serializers.Serializer):
                     raise serializers.ValidationError("아이디 또는 비밀번호가 틀립니다")
         else:
             raise serializers.ValidationError("아이디와 비밀번호를 모두 입력하세요")
- 
+
 
 class RegisterSerializer(serializers.ModelSerializer):
 
@@ -62,7 +62,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         print(f"{username}님 회원가입을 축하합니다!")
         return user
 
-
 class UserUpdateSerializer(serializers.Serializer):
     password = serializers.CharField(max_length=20)
     password2 = serializers.CharField(max_length=20)
@@ -78,7 +77,6 @@ class UserUpdateSerializer(serializers.Serializer):
         else :
             raise serializers.ValidationError("비밀번호를 입력해주세요")
        
-
 
 class DrugInfoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -130,6 +128,4 @@ class DrugHourSerializer(serializers.ModelSerializer):
     class Meta:
         model = DrugHour
         fields = '__all__'
-
-
 

@@ -8,8 +8,11 @@ from django.http import JsonResponse
 from users.models import Prescription, DrugInfo, PrescDetail, PillData
 
 def getPrescription(user, apiParam):
+    apiHost = apiParam._apiHost
+    apiKey = apiParam._apiKey
+
     # RSA Public Key 조회
-    rsaPublicKey = getPublicKey()
+    rsaPublicKey = getPublicKey(apiKey)
     print(f"rsaPublicKey: {rsaPublicKey}")
 
     # AES Secret Key 및 IV 생성
@@ -20,13 +23,11 @@ def getPrescription(user, apiParam):
     aesCipherKey = base64.b64encode(rsaEncrypt(rsaPublicKey, aesKey))
     print(f"aesCipherKey: {aesCipherKey}")
 
-    apiHost = apiParam._apiHost
-    apiKey = apiParam._apiKey
     # API URL 설정
     url = apiHost + "api/v1.0/hirasimpleauth/hiraa050300000100"
 
     # 간편인증 요청 후 받은 값 정리
-    reqData = simpleAuth(apiHost, apiKey, apiParam)
+    reqData = simpleAuth(apiHost, apiParam)
     print(f'res: {reqData}')
 
     # API 요청 파라미터 설정
@@ -57,7 +58,7 @@ def getPrescription(user, apiParam):
     latestPrescId = None
 
     try:
-        latestPrescId = Prescription.objects.filter(Q(userId=user)).latest('prescId').prescId
+        latestPrescId = Prescription.objects.filter(Q(user=user)).latest('prescId').prescId
 
     except Prescription.DoesNotExist:
         pass
@@ -71,7 +72,7 @@ def getPrescription(user, apiParam):
         # Prescription 모델 DB에 저장
         prescId = i['No']
         if i['No'] != str(latestPrescId) or latestPrescId is None:
-            prescItem = Prescription(userId=user, prescId=prescId, prescDate=i['DateOfPreparation'], dispensary=i['Dispensary'])
+            prescItem = Prescription(user=user, prescId=prescId, prescDate=i['DateOfPreparation'], dispensary=i['Dispensary'])
             prescItem.save()
 
             # 처방내역 정보 DB에 저장
@@ -81,17 +82,18 @@ def getPrescription(user, apiParam):
                 print(j['Code'])
 
                 # 처방내역의 약물 정보 DB에 저장
-                DrugInfo(
+                drugItem = DrugInfo(
                     drugNo=ediCode,
                     drugName=j['Name'],
                     drugEffect=j['Effect'],
                     component=j['Component'],
                     quantity=j['Quantity'],
-                ).save()
+                )
+                drugItem.save()
 
                 PrescDetail(
                     prescription=prescItem,
-                    drugNo=ediCode,
+                    drugInfo=drugItem,
                     dosagePerOnce=j['DosagePerOnce'],
                     dailyDose=j['DailyDose'],
                     totalDosingDays=j['TotalDosingDays']

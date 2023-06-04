@@ -1,6 +1,6 @@
 class API_Param():
     _apiHost = 'https://api.tilko.net/'
-    _apiKey = 'd826bc51673f456c960e4b30e2ef08f8'
+    _apiKey = 'a379ba7545364b1a8e5b4c4ee040aef7'
 
     myUsername = None
     myBirthdate = None

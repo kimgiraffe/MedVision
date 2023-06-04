@@ -20,7 +20,7 @@ def main(request):
 @api_view(['GET', 'POST'])
 def authenticate(request):
     user = User.objects.get(userId=request.session['userId'])
-
+    print(request.session['userId'])
     if request.method == 'GET':
         return render(request, "api/hira_authenticate.html")
 
@@ -32,7 +32,6 @@ def authenticate(request):
         birthdate = request.POST['birthdate']
         cellphoneNumber = request.POST['cellphone'].replace('-', '')
         identityNumber = request.POST['identity']
-
 
         apiParam = API_Param(username, birthdate, cellphoneNumber, identityNumber)
 
