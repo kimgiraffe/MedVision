@@ -5,7 +5,7 @@ from .models import User, Prescription, DrugInfo, PrescDetail, Schedule, DrugHou
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['userId', 'userRealName', 'userEmail']
+        fields = ['userId', 'userRealName', 'userEmail', 'userPassword']
 
 
 class LoginSerializer(serializers.Serializer):
@@ -39,13 +39,11 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('userId', 'userPassword', 'password2', 'userEmail')
+        fields = ('userId', 'userPassword', 'password2', 'userEmail','userRealName')
 
     def validate(self, attrs):
         if attrs['userPassword'] != attrs['password2']:
-            raise serializers.ValidationError({
-                "password": "비밀번호가 일치하지 않습니다"
-            })
+            raise serializers.ValidationError("비밀번호가 일치하지 않습니다")
         
         if User.objects.filter(userId=attrs['userId']).exists():
             raise serializers.ValidationError("가입된 Id 입니다.")
@@ -63,6 +61,22 @@ class RegisterSerializer(serializers.ModelSerializer):
         password = validated_data.pop('userPassword')
         print(f"{username}님 회원가입을 축하합니다!")
         return user
+
+class UserUpdateSerializer(serializers.Serializer):
+    password = serializers.CharField(max_length=20)
+    password2 = serializers.CharField(max_length=20)
+
+    def validate(self, attrs):
+        password = attrs.get('password')
+        password2 = attrs.get('password2')
+
+        if password and password2:
+            if password != password2:
+                raise serializers.ValidationError( "비밀번호가 일치하지 않습니다")
+            return attrs
+        else :
+            raise serializers.ValidationError("비밀번호를 입력해주세요")
+       
 
 class DrugInfoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -97,11 +111,21 @@ class ScheduleSerializer(serializers.ModelSerializer):
         model = Prescription
         fields = '__all__'
 
+class ScheduleUpdateSerializer(serializers.ModelSerializer):
+    startDate = serializers.DateField(required=True)
+    endDate = serializers.DateField(required=True)
+
+    class Meta:
+        model = Schedule
+        fields = ('startDate', 'endDate')
+    
+    def validate(self, attrs):
+        if attrs['endDate'] <= attrs['startDate']:
+            raise serializers.ValidationError("종료일은 시작일보다 늦어야 합니다.")
+        return attrs
+
 class DrugHourSerializer(serializers.ModelSerializer):
     class Meta:
         model = DrugHour
         fields = '__all__'
-
-
-
 

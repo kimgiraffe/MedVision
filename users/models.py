@@ -25,6 +25,7 @@ class User(models.Model):
     userRealName = models.CharField(max_length=10, blank=True, null=False, default="")
     userEmail = models.EmailField(max_length=25, unique=True)
     userRegisterDatetime = models.DateTimeField(auto_now_add=True)
+    
 
 class Prescription(models.Model):
     user = models.ForeignKey("User",

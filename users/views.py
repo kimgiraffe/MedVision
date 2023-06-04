@@ -1,13 +1,16 @@
 import django.db.utils
 from django.contrib.auth import login, logout, authenticate, models
 from django.contrib.auth.hashers import make_password
+
+from rest_framework.generics import UpdateAPIView
+from rest_framework.permissions import IsAuthenticated
 from django.http import HttpResponse 
 from django.shortcuts import render, redirect
-from rest_framework.generics import UpdateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import User, Prescription, PrescDetail, DrugInfo, Schedule
-from .serializers import UserSerializer, PrescriptionSerializer, PrescDetailSerializer, DrugInfoSerializer, ScheduleSerializer, LoginSerializer, RegisterSerializer
+from .serializers import UserSerializer, PrescriptionSerializer, PrescDetailSerializer, DrugInfoSerializer, ScheduleSerializer,\
+LoginSerializer, RegisterSerializer, UserUpdateSerializer, ScheduleUpdateSerializer
 from rest_framework import generics, status
 from datetime import datetime, timedelta
 
@@ -117,6 +120,51 @@ class LogoutView(APIView):
     
         return Response(status=status.HTTP_200_OK)
 
+
+class UserUpdateView(APIView):
+    serializer_class = UserUpdateSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+
+        if serializer.is_valid():
+            password = request.data['password']
+            userId = request.user
+
+            user = User.objects.get(userId=userId)
+
+            if password == user.userPassword:
+                return Response({"message": "새로운 비밀번호를 입력해주세요"}, status=status.HTTP_400_BAD_REQUEST)
+            model_user = models.User.objects.get(username=userId)
+             # 비밀번호 변경
+            logout(request)
+            user.userPassword = password
+            user.save()
+            model_user.password = make_password(password)
+            model_user.save()
+            return Response(status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class UserDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self,request):
+        userId = request.user
+
+        if userId.is_authenticated:
+            user = User.objects.get(userId=userId)
+            model_user = models.User.objects.get(username=userId)
+
+            user.delete()
+            model_user.delete()
+
+            return Response({"message": "탈퇴되었습니다."},status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response({'message': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+ 
+
 class UserView(generics.ListCreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -190,7 +238,23 @@ class ScheduleListView(generics.ListAPIView):
         # startDate = datetime.strptime(prescription.prescDate).date()
         # endDate = startDate + timedelta(days=maxDosingDays)
 
-        Schedule(prescription=prescription).save()
+        #Schedule(prescription=prescription).save()
+
+    
+        startDateStr = request.data['startDate']
+
+        # 일정 종료일자 검색 (처방내역에서 계산)
+        items = prescription.prescdetails
+        maxDosingDays = 0
+        for i in items:
+            if i.totalDosingDays > max:
+                maxDosingDays = int(i)
+
+        startDate = datetime.strptime(startDate,startDate).date()
+        endDate = startDate + timedelta(days=maxDosingDays)
+
+        Schedule(prescription=prescription, startDate=startDate, endDate=endDate).save()
+        
 
 class ScheduleDetailView(APIView):
     def get_schedule(self, request):
@@ -201,8 +265,32 @@ class ScheduleDetailView(APIView):
         # Serializer에서 해당 검색
         queryset = PrescDetail.objects.filter(prescription=prescription)
 
-class ScheduleUpdateView(UpdateAPIView): pass
 
+class ScheduleDeleteView(APIView):
+    def delete(self, request, presc_id):
+        try:
+            schedule = Schedule.objects.get(prescription__prescId=presc_id)
+        except Schedule.DoesNotExist:
+            return Response({'message': '복용 일정을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if schedule.prescription.user != request.user:
+            schedule.delete()
+        return Response({'message': '복용 일정이 삭제되었습니다'}, status=status.HTTP_204_NO_CONTENT)
+
+
+class ScheduleUpadateView(APIView):
+    serializer_class = ScheduleUpdateSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, presc_id):
+        schedule = Schedule.objects.get(prescription__prescId=presc_id)
+        serializer = self.serializer_class(schedule, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
 """     
   login via web 
   """
@@ -227,4 +315,3 @@ def index(request):
             else: res_data['error'] = '비밀번호를 다시 입력하세요'
 
         return render(request, 'login.html', res_data)
-
