@@ -31,8 +31,8 @@ class LoginSerializer(serializers.Serializer):
                     raise serializers.ValidationError("아이디 또는 비밀번호가 틀립니다")
         else:
             raise serializers.ValidationError("아이디와 비밀번호를 모두 입력하세요")
-
-
+        
+        
 class RegisterSerializer(serializers.ModelSerializer):
 
     password2 = serializers.CharField(write_only=True)
@@ -62,6 +62,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         print(f"{username}님 회원가입을 축하합니다!")
         return user
 
+
 class UserUpdateSerializer(serializers.Serializer):
     password = serializers.CharField(max_length=20)
     password2 = serializers.CharField(max_length=20)
@@ -71,8 +72,8 @@ class UserUpdateSerializer(serializers.Serializer):
         password2 = attrs.get('password2')
 
         if password and password2:
-            if password != password2:
-                raise serializers.ValidationError( "비밀번호가 일치하지 않습니다")
+            if password == password2:
+                raise serializers.ValidationError( "새로운 비밀번호를 입력해주세요")
             return attrs
         else :
             raise serializers.ValidationError("비밀번호를 입력해주세요")
@@ -81,7 +82,8 @@ class UserUpdateSerializer(serializers.Serializer):
 class DrugInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = DrugInfo
-        fields = '__all__'
+        
+
 
 class PrescDetailSerializer(serializers.ModelSerializer):
     drugName = serializers.ReadOnlyField(source='drugInfo.drugName')
@@ -92,6 +94,7 @@ class PrescDetailSerializer(serializers.ModelSerializer):
                 'dosagePerOnce',
                 'dailyDose',
                 'totalDosingDays')
+
 
 class PrescriptionSerializer(serializers.ModelSerializer):
     def get_details(self, obj):
@@ -104,28 +107,61 @@ class PrescriptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Prescription
-        fields = ('prescId', 'details', 'prescDate', 'dispensary')
+        fields = ('prescId', 'prescDate', 'dispensary', 'details')
 
-class ScheduleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Prescription
-        fields = '__all__'
-
-class ScheduleUpdateSerializer(serializers.ModelSerializer):
-    startDate = serializers.DateField(required=True)
-    endDate = serializers.DateField(required=True)
-
-    class Meta:
-        model = Schedule
-        fields = ('startDate', 'endDate')
-    
-    def validate(self, attrs):
-        if attrs['endDate'] <= attrs['startDate']:
-            raise serializers.ValidationError("종료일은 시작일보다 늦어야 합니다.")
-        return attrs
 
 class DrugHourSerializer(serializers.ModelSerializer):
     class Meta:
         model = DrugHour
-        fields = '__all__'
+        fields = ('hour',)
+
+
+class ScheduleSerializer(serializers.ModelSerializer):
+    prescId = serializers.ReadOnlyField(source='prescription.prescId')
+
+    def get_details(self, obj):
+        details = PrescDetail.objects.filter(prescription=obj.prescription)
+        serializer = PrescDetailSerializer(details, many=True)
+
+        return serializer.data
+    
+    def get_hours(self, obj):
+        queryset = DrugHour.objects.filter(schedule=obj)
+        serializer = DrugHourSerializer(queryset, many=True)
+
+        return serializer.data
+    
+    
+    pill_details = serializers.SerializerMethodField('get_details')
+    drug_hours = serializers.SerializerMethodField('get_hours')
+
+    class Meta:
+        model = Schedule
+        fields = ('startDate', 'endDate','prescId', 'pill_details','drug_hours')
+        ordering = ['startDate']
+
+
+class DoseDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PrescDetail
+        fields = ('totalDosingDays', 'dailyDose')
+
+class DoseInfoSerializer(serializers.ModelSerializer):
+    max_totalDosingDays = serializers.SerializerMethodField()
+    max_dailyDose = serializers.SerializerMethodField()
+
+    def get_max_totalDosingDays(self, obj):
+        prescDetails = obj.prescDetail.all()
+        max_totalDosingDays = max(prescDetails.values_list('totalDosingDays', flat=True), default=0)
+        return max_totalDosingDays
+
+    def get_max_dailyDose(self, obj):
+        prescDetails = obj.prescDetail.all()
+        max_dailyDose = max(prescDetails.values_list('dailyDose', flat=True), default=0)
+        return max_dailyDose
+
+    class Meta:
+        model = Prescription
+        fields = ('prescId', 'max_totalDosingDays', 'max_dailyDose')
+
 
