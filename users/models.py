@@ -25,7 +25,7 @@ class User(models.Model):
     userRealName = models.CharField(max_length=10, blank=True, null=False, default="")
     userEmail = models.EmailField(max_length=25, unique=True)
     userRegisterDatetime = models.DateTimeField(auto_now_add=True)
-    
+
 
 class Prescription(models.Model):
     user = models.ForeignKey("User",
@@ -45,8 +45,10 @@ class Schedule(models.Model):
                                 on_delete=models.CASCADE,
                                 db_column="prescId",
                                 related_name='schedules')
-    maxDoseHours = models.IntegerField(default=0)  # 하루 최대 투약횟수
-
+    user = models.ForeignKey("User",
+                             on_delete = models.CASCADE,
+                             db_column="userId",
+                             related_name='schedules')
 
 class DrugInfo(models.Model):
     drugNo = models.DecimalField(max_digits=9, decimal_places=0, primary_key=True)
@@ -54,6 +56,14 @@ class DrugInfo(models.Model):
     drugEffect = models.CharField(max_length=50)    # 효능
     component = models.CharField(max_length=50)     # 성분
     quantity = models.CharField(max_length=12)      # 함량
+
+class DrugHour(models.Model):
+    schedule = models.ForeignKey("Schedule",
+                                   on_delete=models.CASCADE,
+                                   db_column="schedule",
+                                   related_name="drugHour")
+    
+    hour = models.TimeField()
 
 class PrescDetail(models.Model):
     prescription = models.ForeignKey("Prescription",  # 처방번호
@@ -69,15 +79,6 @@ class PrescDetail(models.Model):
     dosagePerOnce = models.DecimalField(max_digits=6, decimal_places=2)  # 1회 투약량
     dailyDose = models.IntegerField()           # 1일 투여횟수
     totalDosingDays = models.IntegerField()     # 총 투여일수
-
-# 처방전 단위마다 등록: 투약횟수 가장 많은 알약만큼 투약시간 등록
-class DrugHour(models.Model):
-    schedule = models.ForeignKey("Schedule",
-                                   primary_key=True,
-                                   on_delete=models.CASCADE,
-                                   db_column="schedule",
-                                   related_name="drugHour")
-    hour = models.TimeField()
 
 class PillData(models.Model):
     drugNo = models.DecimalField(max_digits=9, decimal_places=0, primary_key=True)

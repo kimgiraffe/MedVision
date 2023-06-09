@@ -1,16 +1,14 @@
 import django.db.utils
 from django.contrib.auth import login, logout, authenticate, models
 from django.contrib.auth.hashers import make_password
-
-from rest_framework.generics import UpdateAPIView
 from rest_framework.permissions import IsAuthenticated
 from django.http import HttpResponse 
 from django.shortcuts import render, redirect
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import User, Prescription, PrescDetail, DrugInfo, Schedule
+from .models import User, Prescription, PrescDetail, DrugInfo, Schedule, DrugHour
 from .serializers import UserSerializer, PrescriptionSerializer, PrescDetailSerializer, DrugInfoSerializer, ScheduleSerializer,\
-LoginSerializer, RegisterSerializer, UserUpdateSerializer, ScheduleUpdateSerializer
+LoginSerializer, RegisterSerializer, UserUpdateSerializer, DoseInfoSerializer
 from rest_framework import generics, status
 from datetime import datetime, timedelta
 
@@ -104,7 +102,7 @@ class LoginView(APIView):
         print(user)
         serializer = self.serializer_class(data=user)
         serializer.is_valid(raise_exception=True)
-
+        
         loginUser = authenticate(request, username=user['username'], password=user['password'])
         print(loginUser)
         login(request, loginUser)
@@ -134,8 +132,6 @@ class UserUpdateView(APIView):
 
             user = User.objects.get(userId=userId)
 
-            if password == user.userPassword:
-                return Response({"message": "새로운 비밀번호를 입력해주세요"}, status=status.HTTP_400_BAD_REQUEST)
             model_user = models.User.objects.get(username=userId)
              # 비밀번호 변경
             logout(request)
@@ -150,7 +146,7 @@ class UserUpdateView(APIView):
 class UserDeleteView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self,request):
+    def delete(self,request):
         userId = request.user
 
         if userId.is_authenticated:
@@ -163,12 +159,12 @@ class UserDeleteView(APIView):
             return Response({"message": "탈퇴되었습니다."},status=status.HTTP_204_NO_CONTENT)
         else:
             return Response({'message': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
- 
-
+        
 class UserView(generics.ListCreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
+#모든 처방전 & 약물
 class PrescriptionListView(generics.RetrieveAPIView):
 
     def get(self, request):
@@ -182,19 +178,8 @@ class PrescriptionListView(generics.RetrieveAPIView):
         # Serializer를 사용하여 응답 데이터 직렬화
         serializer = PrescriptionSerializer(queryset, many=True)
         return Response(serializer.data)
-
-class DrugInfoView(APIView):
-    def get(self, request):
-        # 알약 일렬번호 가져오기
-        drugNo = request.data['drugNo']
-
-        #Serializer에서 해당 알약의 정보 검색
-        queryset = DrugInfo.objects.filter(drugNo=drugNo)
-
-        #Serializer를 사용하여 응답 데이터 직렬화
-        serializer = DrugInfoSerializer(queryset)
-        return Response(serializer.data)
     
+
 class PrescDetailListView(generics.ListAPIView):
     def get(self, request):
         # 처방번호 가져오기
@@ -208,6 +193,20 @@ class PrescDetailListView(generics.ListAPIView):
         serializer = PrescDetailSerializer(queryset, many=True)
         return Response(serializer.data)
     
+
+class DrugInfoView(APIView):
+    def get(self, request):
+        # 알약 일렬번호 가져오기
+        drugNo = request.data['drugNo']
+
+        #Serializer에서 해당 알약의 정보 검색
+        queryset = DrugInfo.objects.filter(drugNo=drugNo)
+
+        #Serializer를 사용하여 응답 데이터 직렬화
+        serializer = DrugInfoSerializer(queryset)
+        return Response(serializer.data)
+
+
 class ScheduleListView(generics.ListAPIView):
     # 일정 목록을 보여줄 때
     def get(self, request):
@@ -221,40 +220,82 @@ class ScheduleListView(generics.ListAPIView):
         serializer = ScheduleSerializer(queryset, many=True)
         return Response(serializer.data)
 
-    # 새로운 일정을 등록할 때
+    # 일정 삭제
+    def delete(self, request):
+        try:
+            prescId = request.data['prescId']
+            prescription = Prescription.objects.get(prescId=prescId)
+            schedule = prescription.schedules.get()
+        except Schedule.DoesNotExist:
+            return Response({'message': 'Schedule not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
+        schedule.delete()
+        return Response({'message': '복용 일정이 삭제되었습니다'}, status=status.HTTP_204_NO_CONTENT)
+
     def post(self, request):
-        # 처방내역 선택
+        presc_id = request.data.get('prescId')
+        start_date = request.data.get('startDate')
+        end_date = request.data.get('endDate')
+        drug_hours = request.data.get('drugHours')
+
+        print(presc_id)
+
+        try:
+            prescription = Prescription.objects.get(prescId=presc_id)
+            user = User.objects.get(userId=request.user)
+            schedule = prescription.schedules.first()
+
+            # If a schedule exists, update its start and end dates
+            if schedule:
+                schedule.startDate = start_date
+                schedule.endDate = end_date
+                schedule.save()
+            else:
+                # Create a new schedule
+                schedule = Schedule.objects.create(prescription=prescription,
+                                               startDate=start_date,
+                                               endDate=end_date,
+                                               user=user)
+
+            # Delete existing drug hours associated with the schedule
+            schedule.drugHour.all().delete()
+
+            # Create new drug hours
+            for hour in drug_hours:
+                DrugHour.objects.create(schedule=schedule, hour=hour)
+
+            return Response({'message': '일정이 등록되었습니다'}, status=status.HTTP_201_CREATED)
+        except Prescription.DoesNotExist:
+            return Response({'error': 'Prescription not found'}, status=status.HTTP_404_NOT_FOUND)
+     
+
+
+
+
+
+#복용일정 추가 버튼 사용시 
+#복용 일정 설정이 가능한 처방전 내역 
+class PrescForScheduleView(APIView):
+    def get(self, request):
+        user = User.objects.get(userId=request.user)
+
+        # Serializer에서 해당 사용자의 처방내역 검색
+        queryset = Prescription.objects.filter(user=user).exclude(schedules__isnull=False)
+        serializer = PrescriptionSerializer(queryset, many=True)
+
+        return Response(serializer.data)
+    
+        
+#복용 일정 추가할 처방전의 복용 기간과 알람 설정 가능 개수
+class ForScheduleDoseView(APIView):
+    def get(self, request):
         prescId = request.data['prescId']
         prescription = Prescription.objects.get(prescId=prescId)
 
-        # 날짜 등록하는 View에서 구현할 것
-        # # 일정 종료일자 검색 (처방내역에서 계산)
-        # items = prescription.prescdetails
-        # maxDosingDays = 0
-        # for i in items:
-        #     if i.totalDosingDays > max:
-        #         maxDosingDays = int(i)
-        #
-        # startDate = datetime.strptime(prescription.prescDate).date()
-        # endDate = startDate + timedelta(days=maxDosingDays)
-
-        #Schedule(prescription=prescription).save()
-
-    
-        startDateStr = request.data['startDate']
-
-        # 일정 종료일자 검색 (처방내역에서 계산)
-        items = prescription.prescdetails
-        maxDosingDays = 0
-        for i in items:
-            if i.totalDosingDays > max:
-                maxDosingDays = int(i)
-
-        startDate = datetime.strptime(startDate,startDate).date()
-        endDate = startDate + timedelta(days=maxDosingDays)
-
-        Schedule(prescription=prescription, startDate=startDate, endDate=endDate).save()
+        serializer = DoseInfoSerializer(prescription)
+        return Response(serializer.data, status=status.HTTP_200_OK)
         
+
 
 class ScheduleDetailView(APIView):
     def get_schedule(self, request):
@@ -265,32 +306,6 @@ class ScheduleDetailView(APIView):
         # Serializer에서 해당 검색
         queryset = PrescDetail.objects.filter(prescription=prescription)
 
-
-class ScheduleDeleteView(APIView):
-    def delete(self, request, presc_id):
-        try:
-            schedule = Schedule.objects.get(prescription__prescId=presc_id)
-        except Schedule.DoesNotExist:
-            return Response({'message': '복용 일정을 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
-        
-        if schedule.prescription.user != request.user:
-            schedule.delete()
-        return Response({'message': '복용 일정이 삭제되었습니다'}, status=status.HTTP_204_NO_CONTENT)
-
-
-class ScheduleUpadateView(APIView):
-    serializer_class = ScheduleUpdateSerializer
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, presc_id):
-        schedule = Schedule.objects.get(prescription__prescId=presc_id)
-        serializer = self.serializer_class(schedule, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    
 """     
   login via web 
   """
@@ -315,3 +330,4 @@ def index(request):
             else: res_data['error'] = '비밀번호를 다시 입력하세요'
 
         return render(request, 'login.html', res_data)
+    
