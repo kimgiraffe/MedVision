@@ -17,3 +17,6 @@ Picture your pills, know your health!
 
 ## MedVision(FrontEnd) GitHub
 https://github.com/kimgiraffe/MedVision_FrontEnd
+
+## 위키
+http://cscp2.sogang.ac.kr/CSE4187/index.php/%EC%9D%B5%EC%8A%A4%ED%94%8C%EB%A1%9C%EB%9F%AC
